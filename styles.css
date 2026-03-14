@@ -1,0 +1,459 @@
+:root{
+  --bg:#f6efe9;
+  --neck:#3b2b20;
+  --fret:#4a3a30;
+  --marker:#e6b07a;
+  --accent:#8a2b2b;
+  --note-bg:#fff;
+  --shadow: rgba(0,0,0,0.14);
+  --touch-size:56px;
+  --font: "Helvetica Neue", Arial, sans-serif;
+}
+
+/* loader overlay styles */
+#loader{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  /* elegant church photo with a warm dark overlay for legibility */
+  background:
+    linear-gradient(180deg, rgba(20,12,8,0.72), rgba(40,24,18,0.78)),
+    url('https://images.unsplash.com/photo-1508163220003-4f1b0d8f9a2a?q=80&w=1400&auto=format&fit=crop');
+  background-size:cover;
+  background-position:center;
+  z-index:99999;
+  transition:opacity 260ms ease, transform 260ms ease;
+  pointer-events:auto;
+}
+#loader.hidden{
+  opacity:0;
+  transform:scale(0.98);
+  pointer-events:none;
+}
+#loader .loader-inner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:18px 22px;
+  border-radius:16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+}
+#loader .logo{
+  width:86px;
+  height:86px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:44px;
+  background:linear-gradient(180deg,#fff9ec,#fff2d6);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.6);
+}
+#loader .loader-text{
+  color:#fff;
+  font-weight:700;
+  font-size:16px;
+  letter-spacing:0.6px;
+}
+
+/* prevent any horizontal page scroll and ensure layout stays within viewport */
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg);
+  font-family:var(--font);
+  -webkit-tap-highlight-color:transparent;
+  overflow-x:hidden;
+  /* keep vertical scrolling but hide native scrollbars visually */
+  overflow-y:auto;
+  /* Firefox: hide scrollbar */
+  scrollbar-width:none;
+  /* IE/Edge legacy */
+  -ms-overflow-style:none;
+  /* ensure scroll thumb is transparent where supported */
+  scrollbar-color: transparent transparent;
+}
+/* WebKit/Blink: hide scrollbars but preserve scrolling */
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+#app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding:12px;
+  box-sizing:border-box;
+  width:100%;
+  max-width:100%;
+}
+
+/* Neck container - violin body look */
+.neck-wrap{
+  /* full-bleed container so the violin body can occupy the full viewport */
+  width:100%;
+  max-width:100%;
+  height:100vh;
+  background:transparent;
+  border-radius:0;
+  box-shadow:0 8px 24px var(--shadow);
+  overflow:visible;
+  -webkit-overflow-scrolling:touch;
+  padding:0;
+  box-sizing:border-box;
+  display:flex;
+  align-items:stretch;
+  justify-content:center;
+}
+
+/* violin body shell */
+.violin-body{
+  /* occupy the full screen area provided by .neck-wrap */
+  width:100%;
+  max-width:100%;
+  height:100vh;
+  background:linear-gradient(180deg,#4a2f23 0%, #2b1b15 100%);
+  border-radius:0;
+  position:relative;
+  padding:18px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* subtle bridge and scroll visuals */
+.bridge{
+  position:absolute;
+  bottom:18%;
+  left:50%;
+  transform:translateX(-50%);
+  width:48%;
+  height:6px;
+  background:linear-gradient(90deg,#d9b79a,#b77a4a);
+  border-radius:4px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+  z-index:2;
+}
+
+
+/* Strings container: columns for each string */
+.strings{
+  width:100%;
+  /* allow the column content to extend the page vertically; no internal scroll */
+  display:flex;
+  gap:12px;
+  align-items:stretch;
+  justify-content:center;
+  padding:8px;
+  box-sizing:border-box;
+  overflow:visible;
+  -webkit-overflow-scrolling:touch;
+  flex-wrap:nowrap;
+  position:relative; /* needed for absolute horizontal row indicators */
+}
+
+/* Each string column */
+.string-column{
+  flex:1 1 0;
+  min-width:88px;
+  /* lighter column background per user request */
+  background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  border-radius:12px;
+  padding:12px 8px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  position:relative;
+}
+
+/* horizontal row indicators that span across the strings container */
+.position{ position:relative; }
+/* these will be created once per natural row and positioned absolutely inside .strings */
+.h-indicator{
+  position:absolute;
+  left:4px; /* slightly larger span to feel more continuous */
+  right:4px;
+  height:64px; /* increased for stronger presence on mobile */
+  background: rgba(255,250,230,0.82); /* warm, clearer highlight */
+  border-radius:14px;
+  z-index:0;
+  pointer-events:none;
+  transition:opacity 160ms cubic-bezier(.2,.9,.3,1), transform 160ms cubic-bezier(.2,.9,.3,1);
+  opacity:0;
+  transform:translateY(6px);
+  border: 1.5px solid rgba(255,220,140,0.95); /* more prominent edge */
+  box-shadow: 0 10px 28px rgba(0,0,0,0.16), inset 0 2px 0 rgba(255,255,255,0.12);
+}
+/* visible state */
+.h-indicator.visible{
+  opacity:1;
+  transform:translateY(0);
+  /* stronger visible state: lift slightly and sharpen shadow */
+  box-shadow: 0 14px 34px rgba(0,0,0,0.20), inset 0 2px 0 rgba(255,255,255,0.14);
+}
+
+/* ensure note buttons sit above the indicator */
+.position .note{
+  position:relative;
+  z-index:1;
+}
+
+/* top label for the string name */
+.string-top{
+  color:#fff;
+  font-weight:700;
+  font-size:16px;
+  margin-bottom:4px;
+  padding:6px 8px;
+  border-radius:8px;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  will-change: transform, box-shadow;
+  position:relative; /* allow beat highlight pseudo-element */
+  z-index:2;
+}
+
+/* visual beat state applied when metronome ticks this string */
+.string-top.beat{
+  transform: translateY(-4px) scale(1.03);
+  /* stronger visible square behind text: pale warm yellow with glow */
+  color: #000; /* make text black during beat for contrast */
+  box-shadow: 0 10px 26px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06);
+  background: transparent;
+}
+/* create a prominent rounded rectangular highlight behind the label */
+.string-top.beat::before{
+  content: '';
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -6px;
+  bottom: -6px;
+  background: linear-gradient(180deg, rgba(255,250,220,0.98), rgba(255,243,180,0.96));
+  border-radius:12px;
+  z-index: -1;
+  box-shadow: 0 8px 30px rgba(250,200,60,0.20), 0 2px 10px rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,220,120,0.9);
+  filter: drop-shadow(0 6px 18px rgba(250,200,60,0.12));
+  transition: opacity 140ms ease, transform 140ms ease;
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* vertical stack of positions (column) */
+.positions{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:center;
+  padding-bottom:32px;
+}
+
+/* each position (row inside the string column) */
+.position{
+  width:64px;
+  height:var(--touch-size);
+  background:linear-gradient(90deg, rgba(0,0,0,0.03), rgba(255,255,255,0.02));
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,0.08);
+}
+
+/* note button */
+.note{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:var(--note-bg);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 6px 12px rgba(0,0,0,0.18);
+  font-weight:700;
+  color:#222;
+  font-size:13px;
+  user-select:none;
+  touch-action:manipulation;
+}
+
+/* sharps/flats variants */
+.note.sharp{ background:linear-gradient(#ffeeda,#fff4cc); border:2px solid #d2a84e; }
+.note.flat{ background:linear-gradient(#f0f7ff,#dfefff); border:2px solid #5ea0e6; }
+
+
+
+/* settings gear + panel */
+.gear{
+  position:fixed;
+  top:12px;
+  right:12px;
+  width:44px;
+  height:44px;
+  border-radius:10px;
+  background:linear-gradient(180deg,#5a3b2f,#2b1b15);
+  border:none;
+  box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.gear::before{
+  content:'⚙';
+}
+.settings-panel{
+  position:fixed;
+  top:72px;
+  right:12px;
+  width:260px;
+  max-width:86vw;
+  background:linear-gradient(180deg,#fff,#f8f7f6);
+  border-radius:12px;
+  box-shadow:0 14px 40px rgba(0,0,0,0.28);
+  z-index:999;
+  transform-origin:top right;
+  transition:transform 220ms ease, opacity 180ms ease;
+  opacity:0;
+  transform:scale(0.96);
+  pointer-events:none;
+  border:1px solid rgba(0,0,0,0.06);
+}
+.settings-panel[aria-hidden="false"]{
+  opacity:1;
+  transform:scale(1);
+  pointer-events:auto;
+}
+.settings-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(0,0,0,0.04)}
+.settings-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+.setting-item{display:flex;align-items:center;gap:8px;font-size:14px;color:#222}
+.setting-item input{width:18px;height:18px}
+.settings-note-help{font-size:12px;color:#666;margin-top:8px}
+
+/* metronome minor styles */
+.metronome-section input[type="range"]{
+  -webkit-appearance:none;
+  height:6px;
+  background:linear-gradient(90deg,#e9e9e9,#f3f3f3);
+  border-radius:6px;
+  outline:none;
+}
+.metronome-section input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;height:18px;border-radius:50%;background:#8a2b2b;border:2px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.18);
+}
+.metronome-section input[type="range"]::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;background:#8a2b2b;border:2px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.18);
+}
+
+/* small legend preserved below neck */
+.legend{
+  width:100%;
+  max-width:480px;
+  margin-top:12px;
+  color:#333;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.solfege{font-size:13px;color:#222;opacity:0.9;margin-top:4px;}
+
+/* Notes visual: make them sit on the violin body (lighter, contrasting) */
+.note{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:linear-gradient(180deg,#fff,#fff8ea);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 6px 18px rgba(0,0,0,0.2);
+  font-weight:700;
+  color:#222;
+  font-size:13px;
+  user-select:none;
+  touch-action:manipulation;
+  border:1px solid rgba(0,0,0,0.06);
+}
+
+/* controls to hide variants by toggling classes on .violin-body */
+.violin-body.hide-sharp .note.sharp,
+.violin-body.hide-flat .note.flat,
+.violin-body.hide-natural .note:not(.sharp):not(.flat){
+  display:none;
+}
+
+/* tweak column sizes to avoid horizontal overflow */
+.strings{
+  width:100%;
+  display:flex;
+  gap:12px;
+  align-items:stretch;
+  justify-content:space-between;
+  padding:8px;
+  box-sizing:border-box;
+  overflow-x:hidden;
+  flex-wrap:nowrap;
+}
+.string-column{
+  flex:1 1 0;
+  min-width:68px;
+  max-width:120px;
+  padding:12px 6px;
+}
+
+/* touch feedback */
+.note:active{ transform:translateY(1px) scale(0.98); box-shadow:0 2px 6px rgba(0,0,0,0.18)}
+
+/* responsive tweaks */
+@media (max-width:420px){
+  :root{--touch-size:56px}
+  .position{width:56px}
+  .note{width:48px;height:48px;font-size:14px}
+}
+
+/* remove the horizontal bridge visual so no stray brown line appears */
+.bridge{ display:none !important; }
+
+/* style open-string (principal) notes as green per string column:
+   1 = G (sol), 2 = D (re), 3 = A (la), 4 = E (mi) */
+.string-column:nth-child(1) .note.open-note{
+  background:linear-gradient(180deg,#e9fff0,#d8fbe0);
+  border:2px solid #58a063;
+  color:#0b3d19;
+  box-shadow:0 8px 18px rgba(20,80,40,0.12);
+}
+.string-column:nth-child(2) .note.open-note{
+  background:linear-gradient(180deg,#eafff4,#d0f9de);
+  border:2px solid #4fa94f;
+  color:#06371b;
+  box-shadow:0 8px 18px rgba(20,80,40,0.10);
+}
+.string-column:nth-child(3) .note.open-note{
+  background:linear-gradient(180deg,#f0fff6,#d6fbe6);
+  border:2px solid #3fa83f;
+  color:#083617;
+  box-shadow:0 8px 18px rgba(20,80,40,0.10);
+}
+.string-column:nth-child(4) .note.open-note{
+  background:linear-gradient(180deg,#e9fff2,#cff9e6);
+  border:2px solid #2fa832;
+  color:#052d14;
+  box-shadow:0 8px 18px rgba(20,80,40,0.10);
+}
